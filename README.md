@@ -73,4 +73,5 @@ WSIT опубликован как проект с открытым исходн
 contacts:
 
 telegram:@peppeen
+
 mail: whiteshieldd@hotmail.com
