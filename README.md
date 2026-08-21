@@ -1,6 +1,6 @@
 # White-Shield-IMAP-Transport
 
-##Telegram group: https://t.me/wsitproject
+## Telegram group: https://t.me/wsitproject
 
 > [!IMPORTANT]
 > **Proof of Concept (PoC).** WSIT — экспериментальный транспорт в активной
