@@ -5,19 +5,74 @@
 > разработке. Протокол, конфигурация, интерфейс и производительность могут
 > меняться между коммитами.
 
-## Быстрый старт из релиза
+## Быстрый раскур
 
-Готовые файлы находятся в [релизе v1.0.0](https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/tag/v1.0.0):
+Готовые файлы находятся в [релизе v1.0.0](https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/tag/v1.0.0).
 
-- [Windows-клиент](https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/download/v1.0.0/WSIT-Client-Windows.exe) — скачайте и запустите;
-- [Linux amd64](https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/download/v1.0.0/WSIT-Client-Linux-amd64) / [arm64](https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/download/v1.0.0/WSIT-Client-Linux-arm64) — `chmod +x` и запустите;
-- [VPS amd64](https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/download/v1.0.0/WSIT-VPS-Client-linux-amd64) / [arm64](https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/download/v1.0.0/WSIT-VPS-Client-linux-arm64) — установите на VPS;
-- [Android APK](https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/download/v1.0.0/WSIT-Android-debug.apk) — установите на телефон.
+### 1. Сначала VPS
 
-1. На VPS запустите клиент и получите код подключения.
-2. На Windows/Linux/Android импортируйте код и добавьте IMAP-аккаунты.
-3. Выберите ID клиента и нажмите **Включить**.
-4. Windows/Linux используют SOCKS5 `127.0.0.1:1080`; Android направляет трафик через встроенный VPN.
+На чистом Linux VPS создай рабочую папку, скачай бинарник и шаблон конфига:
+
+```bash
+mkdir -p ~/wsit-install
+cd ~/wsit-install
+
+# amd64; для ARM64 замени имя файла на WSIT-VPS-Client-linux-arm64
+curl -fL -o wsit-vps https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/download/v1.0.0/WSIT-VPS-Client-linux-amd64
+curl -fL -o config.yaml https://raw.githubusercontent.com/Nikkkaaws/White-Shield-IMAP-Transport/main/config.example.yaml
+chmod +x wsit-vps
+```
+
+В итоге до запуска должны существовать только два файла:
+
+```text
+~/wsit-install/wsit-vps      # скачанный серверный клиент
+~/wsit-install/config.yaml   # твоя конфигурация с аккаунтами
+```
+
+Открой конфиг и заполни минимум `passphrase`, `target`, `imap.username`,
+`imap.password`, `imap.folder_send` и `imap.folder_recv`. Для VPS поставь:
+
+```yaml
+mode: server
+target: direct
+listen: 127.0.0.1:1080
+```
+
+Запусти установщик из этой же папки:
+
+```bash
+nano config.yaml
+./wsit-vps -config ./config.yaml
+```
+
+Установщик сам создаст системные файлы:
+
+```text
+/usr/local/lib/wsit/wsit       # установленный бинарник
+/usr/local/bin/wsit            # команда менеджера
+/wsit                          # короткая команда менеджера
+/etc/wsit/config.yaml          # рабочий конфиг VPS, права 600
+/etc/systemd/system/wsit.service
+```
+
+Исходный `~/wsit-install/config.yaml` после установки больше не используется
+сервисом: редактируй `/etc/wsit/config.yaml`. В менеджере открой **Проверка**,
+убедись, что IMAP-линии рабочие, запусти сервер и скопируй код подключения.
+
+Если конфиг не был создан до первого запуска, сервис не стартует — бинарник
+установится, но `/etc/wsit/config.yaml` останется отсутствующим. В этом случае
+создай файл из шаблона и запусти бинарник повторно с `-config ./config.yaml`.
+
+### 2. Клиент
+
+- [Windows-клиент](https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/download/v1.0.0/WSIT-Client-Windows.exe) — скачай и запусти;
+- [Linux amd64](https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/download/v1.0.0/WSIT-Client-Linux-amd64) / [arm64](https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/download/v1.0.0/WSIT-Client-Linux-arm64) — `chmod +x` и запусти;
+- [Android APK](https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/download/v1.0.0/WSIT-Android-debug.apk) — установи на телефон.
+
+В клиенте импортируй код подключения, добавь те же IMAP-аккаунты, выбери
+уникальный ID и нажми **Включить**. Windows/Linux используют SOCKS5
+`127.0.0.1:1080`; Android направляет трафик через встроенный VPN.
 
 WSIT создаёт локальный SOCKS5 и переносит TCP-потоки через один или несколько
 IMAP-аккаунтов до WSIT на VPS. Несколько аккаунтов работают как параллельные
