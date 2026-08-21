@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -59,6 +60,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        DirectNetwork.ensure(this)
         store = SecureConfigStore(this)
         config = store.load()
         window.statusBarColor = BG
@@ -375,6 +377,22 @@ class MainActivity : Activity() {
             return
         }
         store.save(config)
+        val permission = VpnService.prepare(this)
+        if (permission != null) {
+            startActivityForResult(permission, VPN_PERMISSION_REQUEST)
+            return
+        }
+        launchTransport()
+    }
+
+    @Deprecated("Android VPN permission still uses the activity result contract")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != VPN_PERMISSION_REQUEST) return
+        if (resultCode == RESULT_OK) launchTransport() else message("Подключение VPN отменено")
+    }
+
+    private fun launchTransport() {
         val intent = Intent(this, TransportService::class.java).setAction(TransportService.ACTION_START)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
         renderedPhase = ""
@@ -704,6 +722,7 @@ class MainActivity : Activity() {
     private fun weighted(weight: Int) = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weight.toFloat())
 
     companion object {
+        private const val VPN_PERMISSION_REQUEST = 701
         private val BG = Color.rgb(11, 13, 16)
         private val PANEL = Color.rgb(22, 26, 32)
         private val PANEL_LIGHT = Color.rgb(38, 44, 53)

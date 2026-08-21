@@ -4,9 +4,9 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.net.VpnService
 import android.os.IBinder
 import android.os.PowerManager
 import wsit.mobile.Controller
@@ -16,11 +16,13 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
-class TransportService : Service() {
+class TransportService : VpnService() {
     private val worker = Executors.newSingleThreadExecutor()
     private var poller: ScheduledExecutorService? = null
     private var controller: Controller? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var vpnTunnel: AndroidVpnTunnel? = null
+    @Volatile private var starting = false
     private lateinit var store: SecureConfigStore
 
     override fun onCreate() {
@@ -39,11 +41,14 @@ class TransportService : Service() {
         return START_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    override fun onBind(intent: Intent?): IBinder? = super.onBind(intent)
 
     override fun onDestroy() {
         poller?.shutdownNow()
-        controller?.close()
+        vpnTunnel?.stop()
+        vpnTunnel = null
+        runCatching { controller?.stop() }
+        runCatching { controller?.close() }
         controller = null
         releaseWakeLock()
         worker.shutdownNow()
@@ -51,24 +56,43 @@ class TransportService : Service() {
     }
 
     private fun startTransport() {
-        if (controller != null) return
+        if (starting || (controller != null && snapshot.phase != "error")) return
+        starting = true
         store.setTransportRequested(true)
         startForeground(NOTIFICATION_ID, notification(snapshot, true))
         acquireWakeLock()
         worker.execute {
             runCatching {
+                snapshot = TransportSnapshot(phase = "starting", stage = "Выбор прямой сети")
+                updateNotification()
+                val networkError = DirectNetwork.await(this)
+                check(networkError.isBlank()) { networkError }
                 val config = store.load()
                 val validation = Mobile.validateConfig(config.toCoreJSON().toString())
                 check(validation.isBlank()) { validation }
+
+                cleanupRuntime()
+                snapshot = TransportSnapshot(phase = "starting", stage = "Подключение Android VPN")
+                updateNotification()
+                vpnTunnel = AndroidVpnTunnel(this).also { it.establish() }
+
                 val next = Mobile.newController(config.toCoreJSON().toString())
                 controller = next
                 next.start()
+                waitForSocks(next)
+                snapshot = snapshot.copy(phase = "starting", stage = "Подключение к SOCKS5")
+                updateNotification()
+                val (host, port) = splitListen(config.listen)
+                checkNotNull(vpnTunnel).startSocksForwarder(host, port)
                 startPolling()
             }.onFailure {
+                cleanupRuntime()
                 snapshot = TransportSnapshot(phase = "error", stage = "Ошибка запуска", error = it.message.orEmpty())
                 store.setTransportRequested(false)
                 updateNotification()
                 releaseWakeLock()
+            }.also {
+                starting = false
             }
         }
     }
@@ -85,16 +109,44 @@ class TransportService : Service() {
         worker.execute {
             snapshot = snapshot.copy(phase = "stopping", stage = "Завершение активных потоков")
             updateNotification()
-            runCatching { active.stop() }
-            active.close()
-            controller = null
-            poller?.shutdownNow()
-            poller = null
+            cleanupRuntime()
             snapshot = TransportSnapshot()
             releaseWakeLock()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
+    }
+
+    private fun waitForSocks(active: Controller) {
+        val deadline = android.os.SystemClock.elapsedRealtime() + 35_000
+        while (android.os.SystemClock.elapsedRealtime() < deadline) {
+            val state = TransportSnapshot.fromJSON(active.status())
+            snapshot = state
+            updateNotification()
+            when (state.phase) {
+                "running" -> return
+                "error" -> error(state.error.ifBlank { "WSIT не запустил локальный SOCKS5" })
+            }
+            Thread.sleep(150)
+        }
+        error("Истекло время запуска локального SOCKS5")
+    }
+
+    private fun splitListen(value: String): Pair<String, Int> {
+        val separator = value.lastIndexOf(':')
+        require(separator > 0) { "Неверный адрес SOCKS5: $value" }
+        return value.substring(0, separator) to value.substring(separator + 1).toInt()
+    }
+
+    private fun cleanupRuntime() {
+        poller?.shutdownNow()
+        poller = null
+        vpnTunnel?.stop()
+        vpnTunnel = null
+        val active = controller
+        controller = null
+        runCatching { active?.stop() }
+        runCatching { active?.close() }
     }
 
     private fun startPolling() {
@@ -159,6 +211,11 @@ class TransportService : Service() {
     private fun releaseWakeLock() {
         wakeLock?.takeIf { it.isHeld }?.release()
         wakeLock = null
+    }
+
+    override fun onRevoke() {
+        stopTransport()
+        super.onRevoke()
     }
 
     companion object {

@@ -1,10 +1,14 @@
 [CmdletBinding()]
 param(
-    [string]$Apk = (Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..')).Path 'build\WSIT-Android-debug.apk'),
+    [string]$Apk = '',
     [string]$AndroidSdk = "$env:LOCALAPPDATA\Android\Sdk"
 )
 
 $ErrorActionPreference = 'Stop'
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+if ([string]::IsNullOrWhiteSpace($Apk)) {
+    $Apk = Join-Path $repoRoot 'build\WSIT-Android-debug.apk'
+}
 $adb = Join-Path $AndroidSdk 'platform-tools\adb.exe'
 if (-not (Test-Path -LiteralPath $adb)) { throw "adb not found: $adb" }
 if (-not (Test-Path -LiteralPath $Apk)) { throw "APK not found: $Apk" }

@@ -16,6 +16,7 @@ UDP-трафик пока не передаётся.
 - [Русская инструкция](#быстрый-старт)
 - [English quick start](#english-quick-start)
 - [Windows-клиент](WINDOWS-CLIENT.md)
+- [Linux-клиент](LINUX-CLIENT.md)
 - [VPS-клиент](SERVER-CONTROL.md)
 - [Android-клиент](android/README.md)
 
@@ -24,6 +25,7 @@ UDP-трафик пока не передаётся.
 | Компонент | Назначение |
 | --- | --- |
 | `WSIT-Client-Windows.exe` | Единый установщик и интерактивный клиент Windows |
+| `WSIT-Client-Linux-*` | Единый установщик и интерактивный клиент Linux |
 | `WSIT-VPS-Client-linux-*` | Единый установщик, systemd-сервис и менеджер VPS |
 | `WSIT-Android-*.apk` | Нативный Android-клиент без root |
 | `cmd/wsit` | Транспортное ядро для ручного запуска |
@@ -34,8 +36,9 @@ UDP-трафик пока не передаётся.
            → IMAP-аккаунты → WSIT на VPS → direct/локальный SOCKS5 → Интернет
 ```
 
-WSIT не меняет системную маршрутизацию. Нужное приложение подключается к
-локальному SOCKS5 напрямую либо через клиент, поддерживающий внешний SOCKS5.
+На Windows и Linux нужное приложение подключается к локальному SOCKS5. На
+Android кнопка **Включить** создаёт системное VPN-подключение и направляет
+трафик в тот же SOCKS5 автоматически.
 
 ## Быстрый старт
 
@@ -60,6 +63,7 @@ go test ./...
 go vet ./...
 
 .\scripts\build-windows-client.ps1
+.\scripts\build-linux-client.ps1 -Arch amd64
 .\scripts\build-server-control.ps1 -Arch amd64
 .\scripts\build-android.ps1 -Variant Debug
 ```
@@ -68,6 +72,7 @@ go vet ./...
 
 ```text
 build/WSIT-Client-Windows.exe
+build/WSIT-Client-Linux-amd64
 build/WSIT-VPS-Client-linux-amd64
 build/WSIT-Android-debug.apk
 ```
@@ -161,7 +166,23 @@ wsit
 через DPAPI и затем откроет обычный интерфейс. Сам `config.yaml` никуда не
 копируется.
 
-### 6. Android
+### 6. Linux
+
+Скопируйте `build/WSIT-Client-Linux-amd64` на настольный Linux и запустите:
+
+```bash
+chmod +x ./WSIT-Client-Linux-amd64
+./WSIT-Client-Linux-amd64
+```
+
+Первый запуск установит клиент в `~/.local/lib/wsit`, создаст команду
+`wsit-client` и пункт меню **WSIT Control**. Дальше настройка совпадает с
+Windows: импортируйте код подключения, добавьте IMAP-аккаунты, выберите
+уникальный ID и подключите нужное приложение к `127.0.0.1:1080`.
+
+Для ARM64 соберите `-Arch arm64`. Удаление и автозапуск доступны в настройках.
+
+### 7. Android
 
 Установка отладочной сборки на подключённое устройство:
 
@@ -174,10 +195,12 @@ wsit
 1. Импортируйте VPS-код в **Настройки → Код подключения**.
 2. Добавьте те же IMAP-аккаунты, что используются сервером.
 3. Назначьте устройству отдельный ID клиента.
-4. Запустите транспорт.
-5. Подключите нужное приложение к `127.0.0.1:1080` как к SOCKS5.
+4. Нажмите **Включить** и при первом запуске подтвердите системный запрос VPN.
+5. Дождитесь состояния **Работает**. Трафик приложений уже направлен через
+   WSIT; NekoBox, v2rayNG и ручная настройка SOCKS5 не нужны.
 
-Root и системный VPN для самого WSIT не нужны. Секреты хранятся через Android
+Root не нужен. WSIT использует Android VPN API, а собственные IMAP-соединения
+исключает из туннеля, поэтому кольцевания нет. Секреты хранятся через Android
 Keystore. Удаление выполняется стандартными средствами Android.
 
 ## Аккаунты и параллельные линии
@@ -228,6 +251,7 @@ supported.
 
    ```powershell
    .\scripts\build-windows-client.ps1
+   .\scripts\build-linux-client.ps1 -Arch amd64
    .\scripts\build-server-control.ps1 -Arch amd64
    .\scripts\build-android.ps1 -Variant Debug
    ```
@@ -243,13 +267,14 @@ supported.
 
 4. Open `wsit` or `/wsit`, check the accounts, start the service, and copy the
    `WSIT1.` connection code.
-5. Import the code in the Windows or Android client, add the same IMAP
+5. Import the code in the Windows, Linux, or Android client, add the same IMAP
    accounts, assign a unique client ID, and start WSIT.
-6. Point the application that should use WSIT to `127.0.0.1:1080` via SOCKS5.
+6. On Windows/Linux, point the application to `127.0.0.1:1080` via SOCKS5.
+   Android routes application traffic automatically after VPN approval.
 
 The connection code contains the transport key, folder names, and DNS setting,
 but no IMAP usernames or passwords. See [WINDOWS-CLIENT.md](WINDOWS-CLIENT.md),
-[SERVER-CONTROL.md](SERVER-CONTROL.md), and
+[LINUX-CLIENT.md](LINUX-CLIENT.md), [SERVER-CONTROL.md](SERVER-CONTROL.md), and
 [android/README.md](android/README.md) for platform details.
 
 ## Known PoC limitations
