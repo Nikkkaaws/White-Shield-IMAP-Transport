@@ -1,0 +1,58 @@
+# Рабочий шаблон VPS. Скопируй в /etc/wsit/config.yaml или передай
+# установщику через -config ./config.yaml, затем замени все значения CHANGE_ME.
+
+mode: server
+listen: "127.0.0.1:1080"
+target: "direct"
+dns_resolver: "1.1.1.1:53"
+passphrase: "CHANGE_ME_shared_long_passphrase"
+client_id: 1
+
+imap:
+  # Основной аккаунт. Он тоже становится отдельной почтовой линией.
+  host: imap.rambler.ru
+  port: 993
+  # Необязательно: IP IMAP-сервера вместо DNS.
+  pin_ip: ""
+  # auto — рекомендовано; off — без привязки к интерфейсу.
+  direct_interface: auto
+  username: "CHANGE_ME_first@example.com"
+  password: "CHANGE_ME_first_password_or_app_password"
+  # Эти папки должны существовать или разрешать создание аккаунту.
+  folder_send: Notes
+  folder_recv: Journal
+
+  # Дополнительные аккаунты = дополнительные параллельные линии.
+  # Удали символы # только после замены каждого CHANGE_ME.
+  # Если аккаунт один, оставь весь этот блок закомментированным.
+  # Для каждой активной записи обязательны username и password.
+  # host/port/pin_ip/direct_interface можно не писать — они возьмутся сверху.
+  # accounts:
+  #   - username: "second@example.com"
+  #     password: "second_password_or_app_password"
+  #   - host: imap.example.org
+  #     port: 993
+  #     username: "third@example.com"
+  #     password: "third_password_or_app_password"
+
+# Рабочие значения производительности. Для первого запуска не меняй.
+batch_delay_ms: 5
+batch_min_kb: 192
+batch_max_kb: 384
+stripe_data: true
+stream_read_kb: 64
+stream_window_kb: 8192
+ack_every_frames: 32
+send_queue_frames: 256
+reorder_max_kb: 16384
+imap_idle_refresh_sec: 45
+imap_append_workers: 1
+stats_interval_sec: 15
+optimistic_open_ms: 20
+ping_interval_ms: 10000
+
+# Автоматическая очистка старых транспортных черновиков.
+purge_after_sec: 90
+purge_every_sec: 30
+purge_owner: server
+log_level: info

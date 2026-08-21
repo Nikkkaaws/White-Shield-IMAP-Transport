@@ -19,7 +19,7 @@ cd ~/wsit-install
 
 # amd64; для ARM64 замени имя файла на WSIT-VPS-Client-linux-arm64
 curl -fL -o wsit-vps https://github.com/Nikkkaaws/White-Shield-IMAP-Transport/releases/download/v1.0.0/WSIT-VPS-Client-linux-amd64
-curl -fL -o config.yaml https://raw.githubusercontent.com/Nikkkaaws/White-Shield-IMAP-Transport/main/config.example.yaml
+curl -fL -o config.yaml https://raw.githubusercontent.com/Nikkkaaws/White-Shield-IMAP-Transport/main/config.vps.example.yaml
 chmod +x wsit-vps
 ```
 
@@ -29,6 +29,16 @@ chmod +x wsit-vps
 ~/wsit-install/wsit-vps      # скачанный серверный клиент
 ~/wsit-install/config.yaml   # твоя конфигурация с аккаунтами
 ```
+
+Готовый шаблон также лежит в репозитории: [`config.vps.example.yaml`](config.vps.example.yaml).
+Отдельного `accounts.yaml` создавать не нужно: основной аккаунт и все
+дополнительные линии находятся внутри `config.yaml` в блоке `imap`.
+
+В скачанном шаблоне активен только основной аккаунт. Блок `accounts` в нём
+закомментирован специально: если нужна одна почта, ничего дополнительно не
+меняй. Если нужны дополнительные линии, раскомментируй записи, замени в них
+логины и пароли и удали неиспользуемые примеры — строки `CHANGE_ME` оставлять
+нельзя.
 
 Открой конфиг и заполни минимум `passphrase`, `target`, `imap.username`,
 `imap.password`, `imap.folder_send` и `imap.folder_recv`. Для VPS поставь:
