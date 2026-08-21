@@ -155,6 +155,49 @@ wsit
 менеджера не останавливает сервис. **Удалить WSIT** удаляет сервис и бинарник,
 но сохраняет `/etc/wsit/config.yaml`.
 
+#### Как добавить аккаунты на VPS
+
+Менеджер показывает аккаунты и проверяет их, а сами данные добавляются в
+конфигурацию VPS:
+
+```bash
+sudo cp /etc/wsit/config.yaml /etc/wsit/config.yaml.bak
+sudo nano /etc/wsit/config.yaml
+```
+
+Основной аккаунт указывается в `imap.username` и `imap.password`. Дополнительные
+линии добавляются в `imap.accounts`:
+
+```yaml
+imap:
+  host: imap.rambler.ru
+  port: 993
+  username: first@example.com
+  password: first-password
+  folder_send: Notes
+  folder_recv: Journal
+  accounts:
+    - username: second@example.com
+      password: second-password
+    - host: imap.example.org
+      port: 993
+      username: third@example.com
+      password: third-password
+```
+
+Для каждого аккаунта можно отдельно указать `host`, `port`, `pin_ip` и
+`direct_interface`; если их нет, используются значения из верхнего блока
+`imap`. После сохранения откройте `wsit`, нажмите **Настройки → R** для
+перечитывания файла, затем выполните **Проверка** и перезапустите сервис:
+
+```bash
+sudo systemctl restart wsit
+sudo systemctl status wsit --no-pager
+```
+
+В разделе **Аккаунты** пароли не показываются. Нерабочая линия будет отмечена
+при проверке и не должна блокировать остальные рабочие линии.
+
 ### 5. Windows
 
 1. Запустите `WSIT-Client-Windows.exe`.
@@ -299,6 +342,35 @@ but no IMAP usernames or passwords. See [WINDOWS-CLIENT.md](WINDOWS-CLIENT.md),
 - Providers may rate-limit, temporarily lock, or disconnect mailboxes during
   sustained high-volume use.
 - Android builds currently target ARM64 and Android 8.0+.
+
+## Частые вопросы
+
+**Обязательно использовать Rambler?** Нет. Это только готовый пресет. Подходит
+любой IMAP-сервер с TLS, папками и рабочими логином/паролем.
+
+**Почему появляется `set a real passphrase`?** В конфигурации оставлено
+`passphrase: change-me-long-secret`. Замени его на свою непустую строку и
+используй ту же строку на VPS и клиентах.
+
+**Можно подключить несколько устройств одними аккаунтами?** Да, но каждому
+устройству нужен свой `client_id` от 1 до 255. Одновременная работа зависит от
+лимитов IMAP-провайдера.
+
+**Сколько аккаунтов добавлять?** Один аккаунт — одна почтовая линия. Жёсткого
+малого лимита в конфигурации нет, но практическое число ограничивают квоты
+почты, задержки IMAP и память VPS. Начинай с 2–4 рабочих линий.
+
+**Как подключить приложения?** На Windows и Linux укажи SOCKS5
+`127.0.0.1:1080`. На Android после нажатия **Включить** и подтверждения VPN
+ручная настройка SOCKS5 и NekoBox не нужны.
+
+**Где смотреть состояние?** В VPS-менеджере: **Обзор**, **Аккаунты**,
+**Проверка** и **Журнал**. На Windows/Linux состояние видно в основном меню,
+на Android — на главном экране и в уведомлении.
+
+**Что делать после добавления аккаунта?** Сначала запусти проверку на VPS,
+затем перезапусти сервис и только после этого запускай клиент. Клиент и VPS
+должны использовать одинаковые аккаунты, папки и passphrase.
 
 ## Peaceful Use Request / Просьба о мирном использовании
 
