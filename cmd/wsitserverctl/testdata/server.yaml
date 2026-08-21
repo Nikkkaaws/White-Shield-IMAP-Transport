@@ -1,0 +1,14 @@
+mode: server
+listen: 127.0.0.1:1080
+target: direct
+dns_resolver: 1.1.1.1:53
+passphrase: test-connection-secret
+client_id: 1
+imap:
+  host: imap.example.test
+  port: 993
+  direct_interface: off
+  username: test@example.test
+  password: test-mail-password
+  folder_send: Notes
+  folder_recv: Journal

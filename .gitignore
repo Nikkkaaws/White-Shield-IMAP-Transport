@@ -1,0 +1,11 @@
+/wsit
+/wsit.exe
+/wsit-linux-amd64
+/wsit-android-arm64
+/build/
+/config.yaml
+/design-demos/
+/wsit-run.exe
+/android/app/libs/wsit-mobile-sources.jar
+*.log
+*.exe~

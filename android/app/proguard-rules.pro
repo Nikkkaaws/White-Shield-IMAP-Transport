@@ -1,0 +1,2 @@
+-keep class wsit.mobile.** { *; }
+-keep class go.** { *; }

@@ -1,0 +1,53 @@
+# Copy to config.yaml (gitignored). SOCKS binds loopback only — PC default route stays.
+mode: client # client | server | probe
+listen: "127.0.0.1:1080"
+target: "127.0.0.1:1080" # server only: local xray/socks, never a public bind
+# SOCKS5 UDP DNS is converted to TCP DNS inside WSIT and resolved from the VPS.
+dns_resolver: "1.1.1.1:53"
+passphrase: "change-me-long-secret"
+client_id: 1 # PC=1 phone=2 if they share folders
+
+imap:
+  host: imap.rambler.ru
+  port: 993
+  # pin_ip skips DNS. SNI stays imap.rambler.ru.
+  pin_ip: "81.19.77.168"
+  # Windows: bind IMAP sockets to the physical gateway adapter, bypassing TUN.
+  direct_interface: auto # auto | off | interface name/index
+  username: "you@rambler.ru"
+  password: "app-password-or-mail-password"
+  folder_send: Notes
+  folder_recv: Journal
+  # extra mailboxes stripe streams. dead logins are skipped at start.
+  # accounts:
+  #   - username: "box2@rambler.ru"
+  #     password: "..."
+
+
+batch_delay_ms: 5
+batch_min_kb: 192
+batch_max_kb: 384
+# Stripe one busy TCP stream across all live mailboxes. Sequence reassembly keeps
+# the byte stream ordered while the least-loaded scheduler avoids slow lanes.
+stripe_data: true
+stream_read_kb: 64
+# Sender-side flow-control bounds cross-mailbox reordering without disabling striping.
+stream_window_kb: 8192
+ack_every_frames: 32
+send_queue_frames: 256
+reorder_max_kb: 16384
+# Rambler closes long IDLE sessions; renew before that instead of reconnecting.
+imap_idle_refresh_sec: 45
+# One primary worker handles control; extra workers open lazily for bulk data.
+imap_append_workers: 1
+stats_interval_sec: 15 # 0 disables transport counters
+# Piggyback the first application bytes (usually TLS ClientHello) on OPEN.
+optimistic_open_ms: 20
+# Four lanes means each APPEND connection is touched every 40 seconds.
+ping_interval_ms: 10000
+# wipe tunnel drafts older than this. 0 = off. rambler quota is 5GB.
+purge_after_sec: 90
+purge_every_sec: 30
+# One janitor on the server avoids one persistent IMAP session per client/account.
+purge_owner: server # server | all
+log_level: info
